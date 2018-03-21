@@ -1,16 +1,16 @@
 from BotAccounts import scrape_suspected_bot_accounts
 
-# bot_names = scrape_suspected_bot_accounts.get_original_bot_names()
+bot_names = scrape_suspected_bot_accounts.get_original_bot_names()
+
+for name in bot_names:
+    print("On bot " + name)
+    followers = scrape_suspected_bot_accounts.get_bots_followers(name)
+
+
+# header = ["id", "username", "screen_name", "location", "url", "description", "followers", "following",
+#               "favorite_count", "tweet_count", "created_at", "time_zone", "geo_enabled", "language",
+#               "profile_image_url", "default_profile", "default_profile_image"]
 #
-# for name in bot_names:
-#     print("On bot " + name)
-#     scrape_suspected_bot_accounts.add_row_to_csv("BotNamesWhoseFollowersWereScraped.csv", name)
-#     followers = scrape_suspected_bot_accounts.get_bots_followers(name)
-#
-# followers = scrape_suspected_bot_accounts.get_bots_followers(bot_names[-1])
+# scrape_suspected_bot_accounts.write_header_to_csv("BotUserData.csv", header)
 
-# names = scrape_suspected_bot_accounts.get_remaining_bot_names()
-# print("names: ", names)
-# print("size: ", len(names))
-
-
+# followers = scrape_suspected_bot_accounts.get_bots_followers(bot_names[-1], debug=True)
