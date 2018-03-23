@@ -21,7 +21,6 @@ import constants
 from datetime import date
 import csv
 import tweepy
-import pandas as pd
 
 
 def read_csv(file_name):
@@ -74,9 +73,25 @@ def get_original_bot_names():
 
 
 def get_bot_names_from_bot_user_data():
-    data_frame = pd.read_csv("BotUserData.csv")
-    username_column = data_frame['username']
-    return username_column
+    data_column = []
+    with open("BotUserData.csv", 'r') as csv_file:
+        reader = csv.reader(csv_file)
+        for row in reader:
+            # get the username column (i.e the second col)
+            #
+            username = row[1]
+            print("username: ", username)
+            data_column.append(username)
+
+    csv_file.close()
+    # pop the first element because it's the column header
+    #
+    data_column.pop(0)
+    return data_column
+
+    # data_frame = pd.read_csv("BotUserData.csv")
+    # username_column = data_frame['username']
+    # return username_column
 
 
 def get_scraped_bot_names():
