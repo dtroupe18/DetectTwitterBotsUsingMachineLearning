@@ -21,6 +21,7 @@ import constants
 from datetime import date
 import csv
 import tweepy
+import pandas as pd
 
 
 def read_csv(file_name):
@@ -72,6 +73,12 @@ def get_original_bot_names():
     return read_csv("HandPickedBotList.csv")
 
 
+def get_bot_names_from_bot_user_data():
+    data_frame = pd.read_csv("BotUserData.csv")
+    username_column = data_frame['username']
+    return username_column
+
+
 def get_scraped_bot_names():
     return read_csv("BotNamesWhoseFollowersWereScraped.csv")
 
@@ -94,27 +101,31 @@ def get_bots_followers(bot_name, debug=False):
     # Add this user name to our csv so we know not to scrape this account again
     #
     add_row_to_csv("BotNamesWhoseFollowersWereScraped.csv", bot_name)
+    try:
+        for user in tweepy.Cursor(constants.api.followers, screen_name=bot_name).items(200):
+            if debug:
+                print("{} {}".format("userId:", user.id))
+                print("{} {}".format("follower count:", user.followers_count))
+                print("{} {}".format("friends count:", user.friends_count))
+                print("{} {}".format("account created at:", user.created_at))
+                print("{} {}".format("status count:", user.statuses_count))
 
-    for user in tweepy.Cursor(constants.api.followers, screen_name=bot_name).items(200):
-        if debug:
-            print("{} {}".format("userId:", user.id))
-            print("{} {}".format("follower count:", user.followers_count))
-            print("{} {}".format("friends count:", user.friends_count))
-            print("{} {}".format("account created at:", user.created_at))
-            print("{} {}".format("status count:", user.statuses_count))
+            if is_likely_a_bot(user):
+                # This user is likely to be a bot so add them to the list
+                #
+                data = [user.id_str, user.name, user.screen_name, user.location,
+                        user.url, user.description, user.followers_count, user.friends_count,
+                        user.favourites_count, user.statuses_count, user.created_at, user.time_zone,
+                        user.geo_enabled, user.lang, user.profile_image_url, user.default_profile,
+                        user.default_profile_image]
 
-        if is_likely_a_bot(user):
-            # This user is likely to be a bot so add them to the list
-            #
-            data = [user.id_str, user.name, user.screen_name, user.location,
-                    user.url, user.description, user.followers_count, user.friends_count,
-                    user.favourites_count, user.statuses_count, user.created_at, user.time_zone,
-                    user.geo_enabled, user.lang, user.profile_image_url, user.default_profile,
-                    user.default_profile_image]
+                add_row_to_csv("BotUserData.csv", data)
+                add_row_to_csv("BotUserIDs.csv", [user.id_str])
+            print("\n")
 
-            add_row_to_csv("BotUserData.csv", data)
-            add_row_to_csv("BotUserIDs.csv", [user.id_str])
-
+    except tweepy.TweepError as e:
+        print("Error encountered for ", bot_name)
+        print("Error response", e.response)
         print("\n")
 
 

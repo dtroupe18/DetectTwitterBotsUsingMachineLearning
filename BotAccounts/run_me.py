@@ -1,6 +1,8 @@
 from BotAccounts import scrape_suspected_bot_accounts
 
-bot_names = scrape_suspected_bot_accounts.get_original_bot_names()
+# bot_names = scrape_suspected_bot_accounts.get_original_bot_names()
+
+bot_names = scrape_suspected_bot_accounts.get_bot_names_from_bot_user_data()
 
 for name in bot_names:
     print("On bot " + name)
