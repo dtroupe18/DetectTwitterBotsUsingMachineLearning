@@ -1,167 +1,174 @@
 import constants
-import time
 import csv
+from datetime import date
 import tweepy
 
 
-def get_verified_user_data(number_of_users_to_scrape, get_user_profile, get_tweets):
-    get_user_ids(number_of_users_to_scrape, get_user_profile, get_tweets)
-
-
-def get_user_ids(number_of_ids_to_get, get_user_profile=True, get_tweets=False):
-    ids = []
-
-    # csv file to save verified user ID's
-    #
-    verified_user_ids = open("VerifiedUserIDs.csv", "w")
-    writer = csv.writer(verified_user_ids)
-
-    for page in tweepy.Cursor(constants.api.followers_ids, screen_name="verified").pages():
-        print(page)
-        for id_number in page:
-            writer.writerow([id_number])
-        ids.extend(page)
-        if len(ids) >= number_of_ids_to_get:
-            print(str(number_of_ids_to_get) + " ids acquired")
-            break
-        time.sleep(60)
-        print("Current number of ids " + str(len(ids)))
-    # END
-    if get_user_profile and get_tweets:
-        get_user_profiles(ids, True)
-    elif get_user_profile:
-        get_user_profiles(ids)
-
-
-def read_user_id_csv(file_name, get_profiles=False, get_tweets=False):
-    user_ids = []
-    with open(str(file_name), 'r') as csvfile:
-        reader = csv.reader(csvfile)
+def read_csv(file_name):
+    """
+    :param file_name: string "fileName.csv"
+    :return: list of csv data
+    """
+    data = []
+    with open(str(file_name), 'r') as csv_file:
+        reader = csv.reader(csv_file)
         for row in reader:
-            user_ids.extend(row)
-    print("Done Reading User ID's")
+            data.extend(row)
 
-    if get_profiles:
-        get_user_profiles(user_ids)
-
-    if get_tweets:
-        get_user_tweets(user_ids)
+    print("Finished reading ", file_name)
+    return data
 
 
-def get_user_profiles(ids, get_tweets=False):
-    verified_screen_names = open("VerifiedUserData.csv", "w")
-    user_data_writer = csv.writer(verified_screen_names)
-    header = ["id", "username", "screen_name", "location", "url", "description", "followers", "following",
-              "favorite_count", "tweet_count", "created_at", "time_zone", "geo_enabled", "language",
-              "profile_image_url", "default_profile", "default_profile_image"]
-
-    user_data_writer.writerow(header)
-
-    # lookup users is limited to 100 per request so this has to be chopped up and sent 100 at a time
-    #
-    sliced_ids = [ids[x:x + 100] for x in range(0, len(ids), 100)]
-    # print(sliced_ids)
-
-    count = 0
-    for id_slice in sliced_ids:
-        print("On slice " + str(count) + " out of " + str(len(sliced_ids)))
-        count += 1
-        user_slice = constants.api.lookup_users(user_ids=id_slice)
-        for user in user_slice:
-            # Twitter User Model https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/user-object
-            #
-            user_data = [user.id_str, user.name, user.screen_name, user.location,
-                         user.url, user.description, user.followers_count, user.friends_count,
-                         user.favourites_count, user.statuses_count, user.created_at, user.time_zone,
-                         user.geo_enabled, user.lang, user.profile_image_url, user.default_profile,
-                         user.default_profile_image]
-            user_data_writer.writerow(user_data)
-
-    print("Done downloading user profiles")
-
-    if get_tweets:
-        print("Fetching user tweets")
-        get_user_tweets(ids)
-    # END
-
-
-def get_user_tweets(user_ids):
-    # This is just the user_id and the text from their last 100 tweets
-    #
-    all_user_tweets = open("VerifiedUserTweets.csv", "w")
-
-    # This is the information about each tweet
-    #
-    tweet_info = open("VerifiedUserTweetInfo.csv", "w")
-
-    # This is a combination of the above information
-    #
-    tweets_and_info = open("VerifiedUserTweetsAndInfo.csv", "w")
-
-    writer = csv.writer(all_user_tweets)
-    writer2 = csv.writer(tweet_info)
-    writer3 = csv.writer(tweets_and_info)
-
-    header = ["UserID"]
-
-    for i in range(1, 101):
-        header.append("Tweet " + str(i) + " text")
-
-    header2 = ["UserID", "Source", "Language", "Favorite Count", "Retweet count",
-               "Favorite Count / Retweet Count", "Is Quote", "Is Reply"]
-
-    header3 = ["UserID", "Tweet Text", "Source", "Language", "Favorite Count", "Retweet count",
-               "Favorite Count / Retweet Count", "Is Quote", "Is Reply"]
-
+def write_header_to_csv(file_name, header):
+    """
+    :param file_name: string "fileName.csv"
+    :param header: list of csv data for the first row
+    :return:
+    """
+    csv_file = open(file_name, "w")
+    writer = csv.writer(csv_file)
     writer.writerow(header)
-    writer2.writerow(header2)
-    writer3.writerow(header3)
 
-    count = 0
-    for user_id in user_ids:
-        try:
-            print("On id " + str(count) + " out of " + str(len(user_ids)))
-            print("Current id: " + str(user_id))
-            count += 1
-            user_tweets = constants.api.user_timeline(user_id=user_id, count=100)
 
-            last_100_tweets = [user_id]
+def add_row_to_csv(file_name, row):
+    """
+    :param file_name: string "fileName.csv"
+    :param row: row of data to add to csv
+    :return:
+    """
+    with open(str(file_name), 'a') as csv_file:
+        writer = csv.writer(csv_file)
+        if type(row) is list:
+            writer.writerow(row)
+        else:
+            writer.writerow([row])
+        csv_file.close()
 
-            # id first then all of the tweets
-            #
 
-            for tweet in user_tweets:
-                last_100_tweets.append(tweet.text)
+def days_between_dates(date_one, date_two):
+    """
+    :param date_one: datetime.datetime
+    :param date_two: datetime.datetime
+        https://docs.python.org/3/library/datetime.html#datetime-objects
+    :return: Int - number of days between those two dates
+    """
+    d1 = date(date_one.year, date_one.month, date_one.day)
+    d2 = date(date_two.year, date_two.month, date_two.day)
+    delta = d2 - d1
+    # print("Days: ", delta.days)
+    if abs((d2 - d1).days) > 0:
+        return delta.days
+    else:
+        # Account could be 0 days old and cause a division by zero error
+        #
+        return 1
 
-                if tweet.in_reply_to_status_id is not None:
-                    is_reply = True
-                else:
-                    is_reply = False
 
-                if tweet.retweet_count > 0:
-                    ratio = tweet.favorite_count / float(tweet.retweet_count)
-                else:
-                    # Prevent divide by zero error
-                    #
-                    ratio = 0
+def get_verified_accounts(number_of_accounts, debug=False):
+    """
+    :param number_of_accounts: int
+    :param debug: Bool whether or not to include print statements
+    :return:
+    """
+    try:
+        for user in tweepy.Cursor(constants.api.followers, screen_name="verified").items(200):
+            if debug:
+                print("{} {}".format("userId:", user.id))
+                print("{} {}".format("follower count:", user.followers_count))
+                print("{} {}".format("friends count:", user.friends_count))
+                print("{} {}".format("account created at:", user.created_at))
+                print("{} {}".format("status count:", user.statuses_count))
 
-                info = [user_id, tweet.source, tweet.lang, tweet.favorite_count, tweet.retweet_count,
-                        ratio, tweet.is_quote_status, is_reply]
-                writer2.writerow(info)
-
-                # Write to tweets and info
+            if not exhibits_bot_like_behavior(user):
+                # This account does not exhibit bot like behavior so we add them to the list
                 #
-                more_info = [user_id, tweet.text, tweet.source, tweet.lang, tweet.favorite_count, tweet.retweet_count,
-                             ratio, tweet.is_quote_status, is_reply]
-                writer3.writerow(more_info)
-            # END
+                data = [user.id_str, user.name, user.screen_name, user.location,
+                        user.url, user.description, user.followers_count, user.friends_count,
+                        user.favourites_count, user.statuses_count, user.created_at, user.time_zone,
+                        user.geo_enabled, user.lang, user.profile_image_url, user.default_profile,
+                        user.default_profile_image]
 
-            writer.writerow(last_100_tweets)
+                add_row_to_csv("VerifiedUserData.csv", data)
+                add_row_to_csv("VerifiedUserIDs.csv", [user.id_str])
+            print("\n")
 
-        except tweepy.TweepError:
-            print("Failed to run command on user " + str(user_id) + " this user will be skipped")
+    except tweepy.TweepError as e:
+        print("Error encountered!")
+        print("Error response", e.response)
+        print("\n")
 
-    print("Done downloading user tweets")
+
+def exhibits_bot_like_behavior(user):
+    """
+    :param user: user object from Twitter
+        # https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/user-object
+    :return: True if account has bot like behavior, false otherwise
+        # here we consider an average of 25 or more tweets per day to be bot like behavior
+    """
+    if 'status' in dir(user):
+        status = user.status
+
+        if status is None:
+            # User as never tweeted so we ignore their account
+            #
+            # print("Not status for ", user.name, " not adding them to verified users")
+            return False
+        else:
+            # print("{} {}".format("account created at:", user.created_at))
+            # print("{} {}".format("last status created at:", status.created_at))
+
+            account_age_in_days = days_between_dates(user.created_at, status.created_at)
+            average_tweets_per_day = user.statuses_count / account_age_in_days
+
+            if average_tweets_per_day >= 25:
+                print(user.name, " exhibits bot like behavior with ", average_tweets_per_day, " tweets per day")
+                return True
+            else:
+                print(user.name, " does NOT exhibit bot like behavior with ", average_tweets_per_day, " tweets per day")
+                return False
+
+
+def get_verified_users(number_of_users_to_scrape):
+    """
+    This function fetches the userId's and profiles for the
+    :param number_of_users_to_scrape: int
+    :return: creates a csv file where each row is a user profile
+    """
+    count = 0
+
+    for page in tweepy.Cursor(constants.api.followers_ids, screen_name="verified").pages(1):
+        print("length of page ", len(page))
+
+        for id_number in page:
+            if count < number_of_users_to_scrape:
+                print("Number of ids: ", count)
+                # check and see if that user if that user is like a bot or not
+                #
+                user = constants.api.get_user(id_number)
+
+                if exhibits_bot_like_behavior(user):
+                    print("User acts like a bot: ", user.name)
+                else:
+                    print("User does not act like a bot: ", user.name)
+                    count += 1
+                    data = [user.id_str, user.name, user.screen_name, user.location,
+                            user.url, user.description, user.followers_count, user.friends_count,
+                            user.favourites_count, user.statuses_count, user.created_at, user.time_zone,
+                            user.geo_enabled, user.lang, user.profile_image_url, user.default_profile,
+                            user.default_profile_image]
+
+                    add_row_to_csv("VerifiedUserData.csv", data)
+                    add_row_to_csv("VerifiedUserIDs.csv", id_number)
+            else:
+                print("number of ids: ", count)
+                break
+
+        if count > number_of_users_to_scrape - 1:
+            break
+
+    print("Finished finding", number_of_users_to_scrape, "verified users who do not exhibit bot like behavior.")
     # END
+
+
 
 
