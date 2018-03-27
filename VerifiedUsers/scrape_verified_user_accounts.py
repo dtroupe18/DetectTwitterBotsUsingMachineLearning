@@ -64,40 +64,6 @@ def days_between_dates(date_one, date_two):
         return 1
 
 
-def get_verified_accounts(number_of_accounts, debug=False):
-    """
-    :param number_of_accounts: int
-    :param debug: Bool whether or not to include print statements
-    :return:
-    """
-    try:
-        for user in tweepy.Cursor(constants.api.followers, screen_name="verified").items(200):
-            if debug:
-                print("{} {}".format("userId:", user.id))
-                print("{} {}".format("follower count:", user.followers_count))
-                print("{} {}".format("friends count:", user.friends_count))
-                print("{} {}".format("account created at:", user.created_at))
-                print("{} {}".format("status count:", user.statuses_count))
-
-            if not exhibits_bot_like_behavior(user):
-                # This account does not exhibit bot like behavior so we add them to the list
-                #
-                data = [user.id_str, user.name, user.screen_name, user.location,
-                        user.url, user.description, user.followers_count, user.friends_count,
-                        user.favourites_count, user.statuses_count, user.created_at, user.time_zone,
-                        user.geo_enabled, user.lang, user.profile_image_url, user.default_profile,
-                        user.default_profile_image]
-
-                add_row_to_csv("VerifiedUserData.csv", data)
-                add_row_to_csv("VerifiedUserIDs.csv", [user.id_str])
-            print("\n")
-
-    except tweepy.TweepError as e:
-        print("Error encountered!")
-        print("Error response", e.response)
-        print("\n")
-
-
 def exhibits_bot_like_behavior(user):
     """
     :param user: user object from Twitter
@@ -142,23 +108,29 @@ def get_verified_users(number_of_users_to_scrape):
         for id_number in page:
             if count < number_of_users_to_scrape:
                 print("Number of ids: ", count)
-                # check and see if that user if that user is like a bot or not
-                #
-                user = constants.api.get_user(id_number)
+                try:
+                    user = constants.api.get_user(id_number)
+                    # check and see if that user if that user is like a bot or not
+                    #
+                    if exhibits_bot_like_behavior(user):
+                        print("User acts like a bot: ", user.name)
+                    else:
+                        print("User does not act like a bot: ", user.name)
+                        count += 1
+                        data = [user.id_str, user.name, user.screen_name, user.location,
+                                user.url, user.description, user.followers_count, user.friends_count,
+                                user.favourites_count, user.statuses_count, user.created_at, user.time_zone,
+                                user.geo_enabled, user.lang, user.profile_image_url, user.default_profile,
+                                user.default_profile_image]
 
-                if exhibits_bot_like_behavior(user):
-                    print("User acts like a bot: ", user.name)
-                else:
-                    print("User does not act like a bot: ", user.name)
-                    count += 1
-                    data = [user.id_str, user.name, user.screen_name, user.location,
-                            user.url, user.description, user.followers_count, user.friends_count,
-                            user.favourites_count, user.statuses_count, user.created_at, user.time_zone,
-                            user.geo_enabled, user.lang, user.profile_image_url, user.default_profile,
-                            user.default_profile_image]
+                        add_row_to_csv("VerifiedUserData.csv", data)
+                        add_row_to_csv("VerifiedUserIDs.csv", id_number)
 
-                    add_row_to_csv("VerifiedUserData.csv", data)
-                    add_row_to_csv("VerifiedUserIDs.csv", id_number)
+                except tweepy.TweepError as e:
+                    print("Error encountered for ", id_number)
+                    print("Error response", e.response)
+                    print("\n")
+
             else:
                 print("number of ids: ", count)
                 break
