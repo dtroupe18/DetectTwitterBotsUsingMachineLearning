@@ -102,7 +102,7 @@ def get_verified_users(number_of_users_to_scrape):
     """
     count = 0
 
-    for page in tweepy.Cursor(constants.api.followers_ids, screen_name="verified").pages(1):
+    for page in tweepy.Cursor(constants.api.followers_ids, screen_name="verified").pages():
         print("length of page ", len(page))
 
         for id_number in page:
