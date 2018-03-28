@@ -18,7 +18,7 @@
 #
 
 import constants
-from datetime import date
+import datetime
 import csv
 import tweepy
 
@@ -125,21 +125,49 @@ def get_bots_followers(bot_name, debug=False):
                 print("{} {}".format("account created at:", user.created_at))
                 print("{} {}".format("status count:", user.statuses_count))
 
-            if is_likely_a_bot(user):
+            average_tweets_per_day, date_of_last_tweet, account_age_in_days = get_daily_tweet_average(user)
+
+            if average_tweets_per_day > 25:
                 # This user is likely to be a bot so add them to the list
                 #
                 data = [user.id_str, user.name, user.screen_name, user.location,
                         user.url, user.description, user.followers_count, user.friends_count,
-                        user.favourites_count, user.statuses_count, user.created_at, user.time_zone,
+                        user.favourites_count, user.statuses_count, average_tweets_per_day,
+                        date_of_last_tweet, account_age_in_days, user.created_at, user.time_zone,
                         user.geo_enabled, user.lang, user.profile_image_url, user.default_profile,
                         user.default_profile_image]
 
-                add_row_to_csv("BotUserData.csv", data)
-                add_row_to_csv("BotUserIDs.csv", [user.id_str])
+                add_row_to_csv("LatestBotUserData.csv", data)
+                add_row_to_csv("LatestBotUserIDs.csv", [user.id_str])
             print("\n")
 
     except tweepy.TweepError as e:
         print("Error encountered for ", bot_name)
+        print("Error response", e.response)
+        print("\n")
+
+
+def get_bot_profile(username):
+    try:
+        user = constants.api.get_user(username)
+        average_tweets_per_day, date_of_last_tweet, account_age_in_days = get_daily_tweet_average(user)
+
+        if average_tweets_per_day > 25:
+            # This user is likely to be a bot so add them to the list
+            #
+            data = [user.id_str, user.name, user.screen_name, user.location,
+                    user.url, user.description, user.followers_count, user.friends_count,
+                    user.favourites_count, user.statuses_count, average_tweets_per_day,
+                    date_of_last_tweet, account_age_in_days, user.created_at, user.time_zone,
+                    user.geo_enabled, user.lang, user.profile_image_url, user.default_profile,
+                    user.default_profile_image]
+
+            add_row_to_csv("LatestBotUserData.csv", data)
+            add_row_to_csv("LatestBotUserIDs.csv", [user.id_str])
+            print("Added bot: ", username)
+
+    except tweepy.TweepError as e:
+        print("Error encountered for ", username)
         print("Error response", e.response)
         print("\n")
 
@@ -151,23 +179,23 @@ def days_between_dates(date_one, date_two):
         https://docs.python.org/3/library/datetime.html#datetime-objects
     :return: Int - number of days between those two dates
     """
-    d1 = date(date_one.year, date_one.month, date_one.day)
-    d2 = date(date_two.year, date_two.month, date_two.day)
+    d1 = datetime.date(date_one.year, date_one.month, date_one.day)
+    d2 = datetime.date(date_two.year, date_two.month, date_two.day)
     delta = d2 - d1
     print("Days: ", delta.days)
     if abs((d2 - d1).days) > 0:
-        return  delta.days
+        return delta.days
     else:
         # Account could be 0 days old and cause a division by zero error
         #
         return 1
 
 
-def is_likely_a_bot(user):
+def get_daily_tweet_average(user):
     """
     :param user: user object from Twitter
         # https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/user-object
-    :return: Bool True is a bot, false otherwise
+    :return: Double - average tweets per day, date of last tweet, and account age in days
     """
     if 'status' in dir(user):
         status = user.status
@@ -176,7 +204,7 @@ def is_likely_a_bot(user):
             # User as never tweeted so we ignore their account
             #
             print("Not status for ", user.name, " not a bot")
-            return False
+            return 0, 0, days_between_dates(user.created_at, datetime.datetime.now().date())
         else:
             print("{} {}".format("account created at:", user.created_at))
             print("{} {}".format("last status created at:", status.created_at))
@@ -186,7 +214,9 @@ def is_likely_a_bot(user):
 
             if average_tweets_per_day >= 25:
                 print(user.name, " is likely to be a bot with ", average_tweets_per_day, " tweets per day")
-                return True
+                return average_tweets_per_day, status.created_at, account_age_in_days
             else:
                 print(user.name, " is NOT likely to be a bot with ", average_tweets_per_day, " tweets per day")
-                return False
+                return average_tweets_per_day, status.created_at, account_age_in_days
+    else:
+        return 0, 0, days_between_dates(user.created_at, datetime.datetime.now().date())
