@@ -55,21 +55,41 @@ def load_csv_into_dataframe(filename):
 # print(df.description.str.split(expand=True).stack().value_counts())
 #
 
+# These characters will appear as their own word if not removed. This results in the hashtag
+# being the most common word. This characters are removed from the results
+#
 my_stop_words = [',', '’', '#', '.', '!', '@', '&', ':', '|', '(', ')', '\'s', ';', '-', 'n\'t', '%']
 
-df = pd.read_csv(r'DataAnalysis/BotUserData/BotUserData.csv', usecols=['description'])
-top_N = 50
+# Read in just the bot profile descriptions
+#
+# bot_description_df = pd.read_csv("DataAnalysis/BotUserData/BotUserData.csv", usecols=['description'])
 
-a = df['description'].str.lower().str.replace(r'#', '').str.cat(sep=' ')
-words = nltk.tokenize.word_tokenize(a)
-word_dist = nltk.FreqDist(words)
+bot_hashtag_counts = []
+bot_at_mention_counts = []
+bot_description_lengths = []
 
-stopwords = nltk.corpus.stopwords.words('english')
-stopwords.extend(my_stop_words)
+for row_index, row in bot_description_df.iterrows():
 
-print("Stop words: ", stopwords)
-words_except_stop_dist = nltk.FreqDist(w for w in words if w not in stopwords)
+    hashtag_count = str(row['description']).count('#')
+    at_mention_count = str(row['description']).count('@')
 
-# rslt = pd.DataFrame(word_dist.most_common(top_N), columns=['Word', 'Frequency'])
-rslt = pd.DataFrame(words_except_stop_dist.most_common(top_N), columns=['Word', 'Frequency']).set_index('Word')
-print(rslt)
+    if isinstance(row['description'], float):
+        # Some descriptions are blank which Pandas converts to NaN
+        # Here we assign any row with NaN in the description to have a length of -1
+        #
+        description_length = -1
+    else:
+        description_length = len(str(row['description']))
+
+    if description_length is None:
+        print("Broken...")
+        description_length = 0
+
+    bot_hashtag_counts.append(hashtag_count)
+    bot_at_mention_counts.append(at_mention_count)
+    bot_description_lengths.append(description_length)
+
+bot_df['hashtag_count'] = bot_hashtag_counts
+bot_df['at_mention_count'] = bot_at_mention_counts
+bot_df['description_length'] = bot_description_lengths
+bot_df.head()
