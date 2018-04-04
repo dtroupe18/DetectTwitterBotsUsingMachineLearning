@@ -1,6 +1,6 @@
 import constants
 import csv
-from datetime import date
+import datetime
 import tweepy
 
 
@@ -52,10 +52,10 @@ def days_between_dates(date_one, date_two):
         https://docs.python.org/3/library/datetime.html#datetime-objects
     :return: Int - number of days between those two dates
     """
-    d1 = date(date_one.year, date_one.month, date_one.day)
-    d2 = date(date_two.year, date_two.month, date_two.day)
+    d1 = datetime.date(date_one.year, date_one.month, date_one.day)
+    d2 = datetime.date(date_two.year, date_two.month, date_two.day)
     delta = d2 - d1
-    # print("Days: ", delta.days)
+    print("Days: ", delta.days)
     if abs((d2 - d1).days) > 0:
         return delta.days
     else:
@@ -64,12 +64,11 @@ def days_between_dates(date_one, date_two):
         return 1
 
 
-def exhibits_bot_like_behavior(user):
+def get_daily_tweet_average(user):
     """
     :param user: user object from Twitter
         # https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/user-object
-    :return: True if account has bot like behavior, false otherwise
-        # here we consider an average of 25 or more tweets per day to be bot like behavior
+    :return: Double - average tweets per day, date of last tweet, and account age in days
     """
     if 'status' in dir(user):
         status = user.status
@@ -77,21 +76,23 @@ def exhibits_bot_like_behavior(user):
         if status is None:
             # User as never tweeted so we ignore their account
             #
-            # print("Not status for ", user.name, " not adding them to verified users")
-            return False
+            print("Not status for ", user.name, " not a bot")
+            return 0, 0, days_between_dates(user.created_at, datetime.datetime.now().date())
         else:
-            # print("{} {}".format("account created at:", user.created_at))
-            # print("{} {}".format("last status created at:", status.created_at))
+            print("{} {}".format("account created at:", user.created_at))
+            print("{} {}".format("last status created at:", status.created_at))
 
             account_age_in_days = days_between_dates(user.created_at, status.created_at)
             average_tweets_per_day = user.statuses_count / account_age_in_days
 
             if average_tweets_per_day >= 25:
-                print(user.name, " exhibits bot like behavior with ", average_tweets_per_day, " tweets per day")
-                return True
+                print(user.name, " is likely to be a bot with ", average_tweets_per_day, " tweets per day")
+                return average_tweets_per_day, status.created_at, account_age_in_days
             else:
-                print(user.name, " does NOT exhibit bot like behavior with ", average_tweets_per_day, " tweets per day")
-                return False
+                print(user.name, " is NOT likely to be a bot with ", average_tweets_per_day, " tweets per day")
+                return average_tweets_per_day, status.created_at, account_age_in_days
+    else:
+        return 0, 0, days_between_dates(user.created_at, datetime.datetime.now().date())
 
 
 def get_verified_users(number_of_users_to_scrape):
@@ -110,21 +111,24 @@ def get_verified_users(number_of_users_to_scrape):
                 print("Number of ids: ", count)
                 try:
                     user = constants.api.get_user(id_number)
+                    average_tweets_per_day, date_of_last_tweet, account_age_in_days = get_daily_tweet_average(user)
+
                     # check and see if that user if that user is like a bot or not
                     #
-                    if exhibits_bot_like_behavior(user):
-                        print("User acts like a bot: ", user.name)
-                    else:
-                        print("User does not act like a bot: ", user.name)
-                        count += 1
+                    if average_tweets_per_day < 10:
+
                         data = [user.id_str, user.name, user.screen_name, user.location,
                                 user.url, user.description, user.followers_count, user.friends_count,
-                                user.favourites_count, user.statuses_count, user.created_at, user.time_zone,
+                                user.favourites_count, user.statuses_count, average_tweets_per_day,
+                                date_of_last_tweet, account_age_in_days, user.created_at, user.time_zone,
                                 user.geo_enabled, user.lang, user.profile_image_url, user.default_profile,
                                 user.default_profile_image]
 
-                        add_row_to_csv("VerifiedUserData.csv", data)
-                        add_row_to_csv("VerifiedUserIDs.csv", id_number)
+                        add_row_to_csv("LatestVerifiedUserData.csv", data)
+                        add_row_to_csv("LatestVerifiedUserIDs.csv", [user.id_str])
+                        print("Added verified user: ", user.name)
+                    else:
+                        print("User acts like a bot: ", user.name)
 
                 except tweepy.TweepError as e:
                     print("Error encountered for ", id_number)
