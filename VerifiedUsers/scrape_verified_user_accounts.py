@@ -127,6 +127,7 @@ def get_verified_users(number_of_users_to_scrape):
                         add_row_to_csv("LatestVerifiedUserData.csv", data)
                         add_row_to_csv("LatestVerifiedUserIDs.csv", [user.id_str])
                         print("Added verified user: ", user.name)
+                        count += 1
                     else:
                         print("User acts like a bot: ", user.name)
 
