@@ -2,6 +2,9 @@ import constants
 import csv
 import datetime
 import tweepy
+import time
+from requests.exceptions import Timeout, ConnectionError
+from urllib3.exceptions import ReadTimeoutError, ProtocolError, SSLError
 
 
 def read_csv(file_name):
@@ -102,13 +105,13 @@ def get_verified_users(number_of_users_to_scrape):
     :return: creates a csv file where each row is a user profile
     """
     count = 0
+    try:
+        for page in tweepy.Cursor(constants.api.followers_ids, screen_name="verified").pages():
+            print("length of page ", len(page))
 
-    for page in tweepy.Cursor(constants.api.followers_ids, screen_name="verified").pages():
-        print("length of page ", len(page))
-
-        for id_number in page:
-            if count < number_of_users_to_scrape:
-                print("Number of ids: ", count)
+            for id_number in page:
+                if count < number_of_users_to_scrape:
+                    print("Number of ids: ", count)
                 try:
                     user = constants.api.get_user(id_number)
                     average_tweets_per_day, date_of_last_tweet, account_age_in_days = get_daily_tweet_average(user)
@@ -136,12 +139,20 @@ def get_verified_users(number_of_users_to_scrape):
                     print("Error response", e.response)
                     print("\n")
 
-            else:
-                print("number of ids: ", count)
+                else:
+                    print("number of ids: ", count)
+                    break
+
+            if count > number_of_users_to_scrape - 1:
                 break
 
-        if count > number_of_users_to_scrape - 1:
-            break
+    except tweepy.TweepError as e:
+        print("Error response", e.response)
+        print("\n")
+
+    except (Timeout, SSLError, ConnectionError, ReadTimeoutError, ProtocolError) as exc:
+        print('2nd exception')
+        time.sleep(150)
 
     print("Finished finding", number_of_users_to_scrape, "verified users who do not exhibit bot like behavior.")
     # END
