@@ -112,7 +112,7 @@ def get_verified_users(number_of_users_to_scrape):
             for id_number in page:
                 if count < number_of_users_to_scrape:
                     print("Number of ids: ", count)
-                try:
+
                     user = constants.api.get_user(id_number)
                     average_tweets_per_day, date_of_last_tweet, account_age_in_days = get_daily_tweet_average(user)
 
@@ -133,11 +133,6 @@ def get_verified_users(number_of_users_to_scrape):
                         count += 1
                     else:
                         print("User acts like a bot: ", user.name)
-
-                except tweepy.TweepError as e:
-                    print("Error encountered for ", id_number)
-                    print("Error response", e.response)
-                    print("\n")
 
                 else:
                     print("number of ids: ", count)
