@@ -111,8 +111,9 @@ def get_verified_users(number_of_users_to_scrape):
 
             for id_number in page:
                 if count < number_of_users_to_scrape:
-                    print("Number of ids: ", count)
+                    print("Getting more users on user number: ", count)
 
+                try:
                     user = constants.api.get_user(id_number)
                     average_tweets_per_day, date_of_last_tweet, account_age_in_days = get_daily_tweet_average(user)
 
@@ -129,14 +130,28 @@ def get_verified_users(number_of_users_to_scrape):
 
                         add_row_to_csv("LatestVerifiedUserData.csv", data)
                         add_row_to_csv("LatestVerifiedUserIDs.csv", [user.id_str])
-                        print("Added verified user: ", user.name)
+                        print("Added verified user: ", user.name, "\n")
                         count += 1
+                        time.sleep(1)
+
                     else:
                         print("User acts like a bot: ", user.name)
 
-                else:
-                    print("number of ids: ", count)
-                    break
+                except tweepy.TweepError as e:
+                    print("Error encountered for ", id_number)
+                    print("Error response", e.response)
+                    print("\n")
+                    time.sleep(60)
+                    continue
+
+                except (Timeout, SSLError, ConnectionError, ReadTimeoutError, ProtocolError) as exc:
+                    print('\n\n2nd exception')
+                    print(exc)
+                    time.sleep(60)
+
+                # else:
+                #     print("number of ids: ", count)
+                #     break
 
             if count > number_of_users_to_scrape - 1:
                 break

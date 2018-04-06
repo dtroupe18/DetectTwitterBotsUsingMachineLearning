@@ -7,4 +7,4 @@ header = ["id", "username", "screen_name", "location", "url", "description", "fo
 
 scrape_verified_user_accounts.write_header_to_csv("LatestVerifiedUserData.csv", header)
 
-scrape_verified_user_accounts.get_verified_users(10000)
+scrape_verified_user_accounts.get_verified_users(25000)
