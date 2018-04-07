@@ -104,57 +104,23 @@ def get_verified_users(number_of_users_to_scrape):
     :param number_of_users_to_scrape: int
     :return: creates a csv file where each row is a user profile
     """
-    count = 0
+
+    page_count = 1
+
+    # There are 5000 users in each page. Here we calculate the number of pages required to get the
+    # requested number of users.
+    #   Note: The number of users returned is always a multiple of 5000
+    #
+    if number_of_users_to_scrape % 5000 == 0:
+        number_of_pages = number_of_users_to_scrape / 5000
+    else:
+        number_of_pages = (number_of_users_to_scrape // 5000) + 1
+
     try:
-        for page in tweepy.Cursor(constants.api.followers_ids, screen_name="verified").pages():
-            print("length of page ", len(page))
-
-            for id_number in page:
-                if count < number_of_users_to_scrape:
-                    print("Getting more users on user number: ", count)
-
-                try:
-                    user = constants.api.get_user(id_number)
-                    average_tweets_per_day, date_of_last_tweet, account_age_in_days = get_daily_tweet_average(user)
-
-                    # check and see if that user if that user is like a bot or not
-                    #
-                    if average_tweets_per_day < 10:
-
-                        data = [user.id_str, user.name, user.screen_name, user.location,
-                                user.url, user.description, user.followers_count, user.friends_count,
-                                user.favourites_count, user.statuses_count, average_tweets_per_day,
-                                date_of_last_tweet, account_age_in_days, user.created_at, user.time_zone,
-                                user.geo_enabled, user.lang, user.profile_image_url, user.default_profile,
-                                user.default_profile_image]
-
-                        add_row_to_csv("LatestVerifiedUserData.csv", data)
-                        add_row_to_csv("LatestVerifiedUserIDs.csv", [user.id_str])
-                        print("Added verified user: ", user.name, "\n")
-                        count += 1
-                        time.sleep(1)
-
-                    else:
-                        print("User acts like a bot: ", user.name)
-
-                except tweepy.TweepError as e:
-                    print("Error encountered for ", id_number)
-                    print("Error response", e.response)
-                    print("\n")
-                    time.sleep(60)
-                    continue
-
-                except (Timeout, SSLError, ConnectionError, ReadTimeoutError, ProtocolError) as exc:
-                    print('\n\n2nd exception')
-                    print(exc)
-                    time.sleep(60)
-
-                # else:
-                #     print("number of ids: ", count)
-                #     break
-
-            if count > number_of_users_to_scrape - 1:
-                break
+        for page in tweepy.Cursor(constants.api.followers_ids, screen_name="verified").pages(number_of_pages):
+            print("length of page ", page_count, ":", len(page))
+            page_count += 1
+            process_page(page)
 
     except tweepy.TweepError as e:
         print("Error response", e.response)
@@ -162,11 +128,48 @@ def get_verified_users(number_of_users_to_scrape):
 
     except (Timeout, SSLError, ConnectionError, ReadTimeoutError, ProtocolError) as exc:
         print('2nd exception')
+        print(exc)
         time.sleep(150)
 
     print("Finished finding", number_of_users_to_scrape, "verified users who do not exhibit bot like behavior.")
     # END
 
 
+def process_page(page):
+    for id_number in page:
 
+        try:
+            user = constants.api.get_user(id_number)
+            average_tweets_per_day, date_of_last_tweet, account_age_in_days = get_daily_tweet_average(user)
+
+            # check and see if that user if that user is like a bot or not
+            #
+            if average_tweets_per_day < 10:
+
+                data = [user.id_str, user.name, user.screen_name, user.location,
+                        user.url, user.description, user.followers_count, user.friends_count,
+                        user.favourites_count, user.statuses_count, average_tweets_per_day,
+                        date_of_last_tweet, account_age_in_days, user.created_at, user.time_zone,
+                        user.geo_enabled, user.lang, user.profile_image_url, user.default_profile,
+                        user.default_profile_image]
+
+                add_row_to_csv("LatestVerifiedUserData.csv", data)
+                add_row_to_csv("LatestVerifiedUserIDs.csv", [user.id_str])
+                print("Added verified user: ", user.name, "\n")
+                # time.sleep(1)
+
+            else:
+                print("User acts like a bot: ", user.name)
+
+        except tweepy.TweepError as e:
+            print("Error encountered for ", id_number)
+            print("Error response", e.response)
+            print("\n")
+            time.sleep(60)
+            continue
+
+        except (Timeout, SSLError, ConnectionError, ReadTimeoutError, ProtocolError) as exc:
+            print('\n\n2nd exception')
+            print(exc)
+            time.sleep(60)
 
