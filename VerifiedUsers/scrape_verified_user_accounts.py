@@ -106,6 +106,7 @@ def get_verified_users(number_of_users_to_scrape):
     """
 
     page_count = 1
+    verified_ids = []
 
     # There are 5000 users in each page. Here we calculate the number of pages required to get the
     # requested number of users.
@@ -120,7 +121,12 @@ def get_verified_users(number_of_users_to_scrape):
         for page in tweepy.Cursor(constants.api.followers_ids, screen_name="verified").pages(number_of_pages):
             print("length of page ", page_count, ":", len(page))
             page_count += 1
-            process_page(page)
+            verified_ids.extend(page)
+        # End
+        print("\n\n*****************************************************************************")
+        print("Done getting ", len(verified_ids), "verified ids")
+        print("Calling process ids...................................")
+        process_verified_ids(verified_ids)
 
     except tweepy.TweepError as e:
         print("Error response", e.response)
@@ -135,9 +141,9 @@ def get_verified_users(number_of_users_to_scrape):
     # END
 
 
-def process_page(page):
-    for id_number in page:
+def process_verified_ids(verified_ids):
 
+    for id_number in verified_ids:
         try:
             user = constants.api.get_user(id_number)
             average_tweets_per_day, date_of_last_tweet, account_age_in_days = get_daily_tweet_average(user)
@@ -172,4 +178,8 @@ def process_page(page):
             print('\n\n2nd exception')
             print(exc)
             time.sleep(60)
+    # End
+    print("\n\n*****************************************************************************")
+    print("Done getting user profiles for ", len(verified_ids))
+
 
