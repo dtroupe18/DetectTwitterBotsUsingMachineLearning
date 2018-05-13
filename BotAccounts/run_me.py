@@ -9,15 +9,11 @@ header = ["id", "username", "screen_name", "location", "url", "description", "fo
           "created_at", "time_zone", "geo_enabled", "language", "profile_image_url", "default_profile",
           "default_profile_image"]
 
-scrape_suspected_bot_accounts.write_header_to_csv("LatestBotUserData.csv", header)
+scrape_suspected_bot_accounts.write_header_to_csv("FullBotUserData.csv", header)
 
 
 for name in bot_names:
     print("On bot " + name)
     scrape_suspected_bot_accounts.get_bot_profile(name)
-    scrape_suspected_bot_accounts.get_bots_followers(name)
+    # scrape_suspected_bot_accounts.get_bots_followers(name)
 
-
-
-
-# scrape_suspected_bot_accounts.get_bots_followers(bot_names[-1], debug=True)

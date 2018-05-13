@@ -74,12 +74,12 @@ def get_original_bot_names():
 
 def get_bot_names_from_bot_user_data():
     data_column = []
-    with open("BotUserData.csv", 'r') as csv_file:
+    with open("FullListOfBotUserIDs.csv", 'r') as csv_file:
         reader = csv.reader(csv_file)
         for row in reader:
             # get the username column (i.e the second col)
             #
-            username = row[1]
+            username = row[0]
             print("username: ", username)
             data_column.append(username)
 
@@ -148,6 +148,10 @@ def get_bots_followers(bot_name, debug=False):
 
 
 def get_bot_profile(username):
+    """
+    :param username: username or userID will work
+    :return:
+    """
     try:
         user = constants.api.get_user(username)
         average_tweets_per_day, date_of_last_tweet, account_age_in_days = get_daily_tweet_average(user)
@@ -162,8 +166,8 @@ def get_bot_profile(username):
                     user.geo_enabled, user.lang, user.profile_image_url, user.default_profile,
                     user.default_profile_image]
 
-            add_row_to_csv("LatestBotUserData.csv", data)
-            add_row_to_csv("LatestBotUserIDs.csv", [user.id_str])
+            add_row_to_csv("FullBotUserData.csv", data)
+            # add_row_to_csv("FullBotUserData.csv", [user.id_str])
             print("Added bot: ", username)
 
     except tweepy.TweepError as e:
